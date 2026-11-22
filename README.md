@@ -21,5 +21,16 @@ Completed the basic **Model Layer** using Java and OOP.
 - Store payment details linked to orders.
 - Track pending, paid and refunded payments.
 
+
+### Reason behind using Repository Layer
+- We require our order history's information in memory
+- If we store it in Orders.java, closing App will result in loss in data
+- To save it we will store that all in external files (Repository files)
+- For that we need CSV files.
+
+## what is Repository 
+- It is a class responsible for saving , retrieving , uodating and deleting data.
+- 
+
 ### Next Step
 Build the **Repository Layer** to save and retrieve data using CSV files.
