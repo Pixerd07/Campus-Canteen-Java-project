@@ -1,4 +1,5 @@
 package com.campus.canteen.policy;
+
 import com.campus.canteen.model.OrderStatus;
 
 public class OrderPolicy {
@@ -8,7 +9,7 @@ public class OrderPolicy {
     }
 
     public boolean canCancel(String status) {
-        return OrderStatus.PLACED.equals(status);
+        return canModify(status);
     }
 
     public boolean canTransition(String currentStatus, String newStatus) {
