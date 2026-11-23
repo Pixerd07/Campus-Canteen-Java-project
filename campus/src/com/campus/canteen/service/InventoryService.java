@@ -1,3 +1,4 @@
+
 package com.campus.canteen.service;
 
 import com.campus.canteen.policy.InventoryPolicy;
@@ -15,7 +16,7 @@ public class InventoryService {
         inventoryPolicy = new InventoryPolicy();
     }
 
-    // set initial stock
+    // Set initial stock
     public void setInitialStock(long itemId, int quantity) {
 
         if (quantity >= 0) {
@@ -23,12 +24,12 @@ public class InventoryService {
         }
     }
 
-    // get available stock
+    // Get available stock (for Admin use)
     public int getStock(long itemId) {
         return stock.getOrDefault(itemId, 0);
     }
 
-    // check stock availability
+    // Check stock availability
     public boolean hasEnoughStock(long itemId, int quantity) {
 
         if (!inventoryPolicy.isValidQuantity(quantity)) {
@@ -36,10 +37,36 @@ public class InventoryService {
         }
 
         return inventoryPolicy.hasEnoughStock(
-                getStock(itemId), quantity);
+                getStock(itemId), quantity
+        );
     }
 
-    // deduct stock after order
+    // Validate stock and throw exception if unavailable
+    public void validateStock(long itemId, int requestedQuantity) {
+
+        if (!inventoryPolicy.isValidQuantity(requestedQuantity)) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero."
+            );
+        }
+
+        int availableStock = getStock(itemId);
+
+        if (availableStock == 0) {
+            throw new StockUnavailableException(
+                    "OUT OF STOCK!"
+            );
+        }
+
+        if (requestedQuantity > availableStock) {
+            throw new StockUnavailableException(
+                    "Only " + availableStock
+                            + " left in stock. Please reduce your quantity."
+            );
+        }
+    }
+
+    // Deduct stock after order
     public boolean deductStock(long itemId, int quantity) {
 
         if (!hasEnoughStock(itemId, quantity)) {
@@ -51,7 +78,7 @@ public class InventoryService {
         return true;
     }
 
-    // restore stock after cancellation
+    // Restore stock after cancellation
     public void restoreStock(long itemId, int quantity) {
 
         if (quantity > 0 && stock.containsKey(itemId)) {
@@ -59,7 +86,7 @@ public class InventoryService {
         }
     }
 
-    // update stock manually
+    // Update stock manually
     public boolean updateStock(long itemId, int newStock) {
 
         if (newStock < 0 || !stock.containsKey(itemId)) {

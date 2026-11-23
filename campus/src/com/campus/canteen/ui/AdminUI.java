@@ -1,7 +1,5 @@
 
-
-
-        package com.campus.canteen.ui;
+package com.campus.canteen.ui;
 
 import com.campus.canteen.model.MenuItem;
 import com.campus.canteen.service.MenuService;
@@ -23,7 +21,7 @@ public class AdminUI {
         this.menuService = menuService;
         this.inventoryService = inventoryService;
         sc = new Scanner(System.in);
-        nextItemId = 1;
+        nextItemId = 6;
     }
 
     public void showMenu() {
@@ -107,13 +105,26 @@ public class AdminUI {
         sc.nextLine();
 
         System.out.print("Enter item name: ");
-        String name = sc.nextLine();
+        String name = sc.nextLine().trim();
+
+        if (name.isEmpty()) {
+            System.out.println("Item name cannot be empty.");
+            return;
+        }
 
         System.out.print("Enter price: ");
         double price = sc.nextDouble();
 
-        if (name.trim().isEmpty() || price <= 0) {
-            System.out.println("Invalid item details.");
+        if (price <= 0) {
+            System.out.println("Price must be greater than zero.");
+            return;
+        }
+
+        System.out.print("Enter initial stock: ");
+        int stock = sc.nextInt();
+
+        if (stock < 0) {
+            System.out.println("Stock cannot be negative.");
             return;
         }
 
@@ -122,17 +133,12 @@ public class AdminUI {
         );
 
         menuService.addItem(item);
+        inventoryService.setInitialStock(nextItemId, stock);
+
+        System.out.println("Menu item added successfully!");
+        System.out.println("Item ID: " + nextItemId);
+
         nextItemId++;
-
-        System.out.print("Enter initial stock: ");
-        int stock = sc.nextInt();
-
-        if (stock >= 0) {
-            inventoryService.setInitialStock(item.getId(), stock);
-            System.out.println("Menu item added successfully!");
-        } else {
-            System.out.println("Invalid stock quantity.");
-        }
     }
 
     private void searchItem() {

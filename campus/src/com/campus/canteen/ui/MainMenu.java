@@ -1,5 +1,7 @@
+
 package com.campus.canteen.ui;
 
+import com.campus.canteen.model.MenuItem;
 import com.campus.canteen.service.MenuService;
 import com.campus.canteen.service.OrderService;
 import com.campus.canteen.service.QueueService;
@@ -23,6 +25,9 @@ public class MainMenu {
         QueueService queueService = new QueueService();
         InventoryService inventoryService = new InventoryService();
 
+        // Load demo data
+        loadDemoData(menuService, inventoryService);
+
         studentUI = new StudentUI(
                 menuService,
                 orderService,
@@ -39,6 +44,24 @@ public class MainMenu {
                 menuService,
                 inventoryService
         );
+    }
+
+    private void loadDemoData(MenuService menuService,
+                              InventoryService inventoryService) {
+
+        menuService.addItem(new MenuItem(1, "Veg Burger", 60, true));
+        menuService.addItem(new MenuItem(2, "Cheese Sandwich", 80, true));
+        menuService.addItem(new MenuItem(3, "Masala Maggi", 50, true));
+        menuService.addItem(new MenuItem(4, "Cold Coffee", 70, true));
+        menuService.addItem(new MenuItem(5, "Veg Pizza", 120, true));
+
+        inventoryService.setInitialStock(1, 20);
+        inventoryService.setInitialStock(2, 15);
+        inventoryService.setInitialStock(3, 25);
+        inventoryService.setInitialStock(4, 30);
+        inventoryService.setInitialStock(5, 10);
+
+        System.out.println("Demo data loaded successfully!");
     }
 
     public void showMenu() {

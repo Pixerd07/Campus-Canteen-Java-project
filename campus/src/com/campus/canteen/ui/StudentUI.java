@@ -1,3 +1,4 @@
+
 package com.campus.canteen.ui;
 
 import com.campus.canteen.model.*;
@@ -85,16 +86,31 @@ public class StudentUI {
 
     private void browseMenu() {
 
-        System.out.println("\n--- AVAILABLE MENU ---");
+        System.out.println("\n--- CANTEEN MENU ---");
 
-        for (MenuItem item : menuService.getAvailableItems()) {
-            System.out.println(
+        List<MenuItem> items = menuService.getAllItems();
+
+        if (items.isEmpty()) {
+            System.out.println("No menu items available.");
+            return;
+        }
+
+        for (MenuItem item : items) {
+
+            System.out.print(
                     item.getId() + ". " +
-                    item.getName() + " - Rs." +
-                    item.getPrice() +
-                    " | Stock: " +
-                    inventoryService.getStock(item.getId())
+                            item.getName() + " - Rs." +
+                            item.getPrice()
             );
+
+            if (!item.isAvailable()
+                    || inventoryService.getStock(item.getId()) == 0) {
+
+                System.out.println(" - OUT OF STOCK");
+
+            } else {
+                System.out.println();
+            }
         }
     }
 
@@ -123,12 +139,46 @@ public class StudentUI {
             System.out.print("Enter quantity: ");
             int qty = sc.nextInt();
 
-            if (!inventoryService.hasEnoughStock(itemId, qty)) {
-                System.out.println("Insufficient stock.");
-                continue;
-            }
+            try {
 
-            items.add(new OrderItem(itemId, qty, item.getPrice()));
+                int existingQuantity = 0;
+                OrderItem existingItem = null;
+
+                // Check whether this item was already selected
+                for (OrderItem selectedItem : items) {
+
+                    if (selectedItem.getItemId() == itemId) {
+                        existingQuantity = selectedItem.getQty();
+                        existingItem = selectedItem;
+                        break;
+                    }
+                }
+
+                int totalQuantity = existingQuantity + qty;
+
+                // Validate combined quantity
+                inventoryService.validateStock(
+                        itemId, totalQuantity
+                );
+
+                if (existingItem != null) {
+                    existingItem.setQty(totalQuantity);
+                } else {
+                    items.add(new OrderItem(
+                            itemId, qty, item.getPrice()
+                    ));
+                }
+
+                System.out.println("Item added to order.");
+
+            } catch (StockUnavailableException e) {
+
+                System.out.println(e.getMessage());
+
+            } catch (IllegalArgumentException e) {
+
+                System.out.println(e.getMessage());
+            }
         }
 
         if (items.isEmpty()) {
@@ -136,20 +186,101 @@ public class StudentUI {
             return;
         }
 
+        // Validate complete order before confirmation
+        try {
+
+            for (OrderItem item : items) {
+
+                inventoryService.validateStock(
+                        item.getItemId(),
+                        item.getQty()
+                );
+            }
+
+        } catch (StockUnavailableException e) {
+
+            System.out.println(e.getMessage());
+            System.out.println("Order cannot be placed.");
+            return;
+        }
+
+        System.out.println("\n===== ORDER SUMMARY =====");
+
+        for (OrderItem item : items) {
+            MenuItem menuItem = menuService.findItem(item.getItemId());
+
+            System.out.println(
+                    menuItem.getName()
+                            + " x " + item.getQty()
+                            + " = Rs. "
+                            + (item.getPrice() * item.getQty())
+            );
+        }
+
+        double total = 0;
+
+        for (OrderItem item : items) {
+            total += item.getPrice() * item.getQty();
+        }
+
+        System.out.println("Total Amount: Rs. " + total);
+
         System.out.print("Confirm order? (1 Yes / 0 No): ");
         int confirm = sc.nextInt();
 
-        if (confirm == 1) {
+        if (confirm != 1) {
+            System.out.println("Order cancelled.");
+            return;
+        }
 
-            Order order = orderService.placeOrder(studentId, items);
+        // Deduct stock and keep track of successful deductions
+        List<OrderItem> deductedItems = new ArrayList<>();
 
-            if (order != null) {
-                System.out.println("Order placed successfully!");
-                System.out.println("Order ID: " + order.getOrderId());
-                System.out.println("Total: Rs." + order.getTotalPrice());
-            } else {
-                System.out.println("Unable to place order.");
+        for (OrderItem item : items) {
+
+            boolean deducted = inventoryService.deductStock(
+                    item.getItemId(),
+                    item.getQty()
+            );
+
+            if (!deducted) {
+
+                // Restore any stock already deducted
+                for (OrderItem deductedItem : deductedItems) {
+                    inventoryService.restoreStock(
+                            deductedItem.getItemId(),
+                            deductedItem.getQty()
+                    );
+                }
+
+                System.out.println(
+                        "Stock changed. Order could not be placed."
+                );
+                return;
             }
+
+            deductedItems.add(item);
+        }
+
+        Order order = orderService.placeOrder(studentId, items);
+
+        if (order != null) {
+
+            System.out.println("Order placed successfully!");
+            System.out.println("Order ID: " + order.getOrderId());
+            System.out.println("Total: Rs. " + order.getTotalPrice());
+
+        } else {
+
+            // Restore stock if order creation fails
+            for (OrderItem item : deductedItems) {
+                inventoryService.restoreStock(
+                        item.getItemId(),
+                        item.getQty()
+                );
+            }
+
+            System.out.println("Unable to place order.");
         }
     }
 
@@ -158,10 +289,11 @@ public class StudentUI {
         List<Order> orders = orderService.getStudentOrders(studentId);
 
         for (Order order : orders) {
+
             System.out.println(
                     "Order ID: " + order.getOrderId() +
-                    " | Status: " + order.getStatus() +
-                    " | Total: Rs." + order.getTotalPrice()
+                            " | Status: " + order.getStatus() +
+                            " | Total: Rs." + order.getTotalPrice()
             );
         }
 
@@ -175,8 +307,25 @@ public class StudentUI {
         System.out.print("Enter Order ID: ");
         long orderId = sc.nextLong();
 
+        Order order = orderService.findOrder(orderId);
+
+        if (order == null || order.getStudentId() != studentId) {
+            System.out.println("Order not found.");
+            return;
+        }
+
         if (orderService.cancelOrder(orderId, studentId)) {
+
+            for (OrderItem item : order.getItems()) {
+
+                inventoryService.restoreStock(
+                        item.getItemId(),
+                        item.getQty()
+                );
+            }
+
             System.out.println("Order cancelled successfully.");
+
         } else {
             System.out.println("Unable to cancel order.");
         }
@@ -195,7 +344,8 @@ public class StudentUI {
         }
 
         int ahead = queueService.getOrdersAhead(
-                orderService.getAllOrders(), orderId);
+                orderService.getAllOrders(), orderId
+        );
 
         if (ahead >= 0) {
             System.out.println("Orders ahead: " + ahead);
