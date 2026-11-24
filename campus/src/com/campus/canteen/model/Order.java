@@ -4,17 +4,31 @@ import java.util.*;
 // this file wiil contain Complete order information
 
 public class Order {
+    private static int tokenCounter = 1;
+
     private long orderId;
     private long studentId;
+    private int tokenNumber;
     private String status;
 
     private List<OrderItem> items;
 
     public Order(long orderId ,long studentId){
+        if (orderId <= 0) {
+            throw new IllegalArgumentException("Order ID must be greater than zero.");
+        }
+        if (studentId <= 0) {
+            throw new IllegalArgumentException("Student ID must be greater than zero.");
+        }
         this.orderId=orderId;
         this.studentId=studentId;
+        this.tokenNumber = tokenCounter++;
         this.status=OrderStatus.PLACED;
         this.items = new ArrayList<>();
+    }
+
+    public static void resetTokenCounter() {
+        tokenCounter = 1;
     }
 
     public long getOrderId() {
@@ -22,6 +36,9 @@ public class Order {
     }
     public long getStudentId() {
         return studentId;
+    }
+    public int getTokenNumber() {
+        return tokenNumber;
     }
     public String getStatus() {
         return status;
@@ -31,11 +48,16 @@ public class Order {
     }
 
     public void addItem(OrderItem item){
+        if (item == null) {
+            throw new IllegalArgumentException("Order item cannot be null.");
+        }
         items.add(item);
     }
 
     public void removeItem(OrderItem item) {
-        items.remove(item);
+        if (item != null) {
+            items.remove(item);
+        }
     }
 
     public int getTotalQuantity() {
@@ -49,6 +71,9 @@ public class Order {
     }
 
     public void setStatus(String status) {
+        if (!OrderStatus.isValid(status)) {
+            throw new IllegalArgumentException("Invalid order status: " + status);
+        }
         this.status = status;
     }
 

@@ -8,6 +8,15 @@ public class Payment {
     private String paymentStatus;
 
     public Payment(long paymentId, long orderId, double amount) {
+        if (paymentId <= 0) {
+            throw new IllegalArgumentException("Payment ID must be greater than zero.");
+        }
+        if (orderId <= 0) {
+            throw new IllegalArgumentException("Order ID must be greater than zero.");
+        }
+        if (!Double.isFinite(amount) || amount < 0) {
+            throw new IllegalArgumentException("Payment amount cannot be negative.");
+        }
         this.paymentId = paymentId;
         this.orderId = orderId;
         this.amount = amount;
@@ -32,6 +41,11 @@ public class Payment {
     }
 
     public void setPaymentStatus(String paymentStatus) {
+        if (!PaymentStatus.PENDING.equals(paymentStatus)
+                && !PaymentStatus.PAID.equals(paymentStatus)
+                && !PaymentStatus.REFUNDED.equals(paymentStatus)) {
+            throw new IllegalArgumentException("Invalid payment status: " + paymentStatus);
+        }
         this.paymentStatus = paymentStatus;
     }
 

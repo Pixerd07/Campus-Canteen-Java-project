@@ -6,13 +6,11 @@ import com.campus.canteen.service.MenuService;
 import com.campus.canteen.service.InventoryService;
 
 import java.util.List;
-import java.util.Scanner;
 
 public class AdminUI {
 
     private MenuService menuService;
     private InventoryService inventoryService;
-    private Scanner sc;
     private long nextItemId;
 
     public AdminUI(MenuService menuService,
@@ -20,12 +18,11 @@ public class AdminUI {
 
         this.menuService = menuService;
         this.inventoryService = inventoryService;
-        sc = new Scanner(System.in);
         nextItemId = 6;
     }
 
     public void showMenu() {
-        int choice;
+        int choice = -1;
 
         do {
             System.out.println("\n===== ADMIN PANEL =====");
@@ -39,48 +36,53 @@ public class AdminUI {
             System.out.println("8. View Stock");
             System.out.println("9. Back");
 
-            System.out.print("Enter choice: ");
-            choice = sc.nextInt();
+            choice = InputHelper.readInt("Enter choice: ");
 
-            switch (choice) {
-                case 1:
-                    viewMenu();
-                    break;
+            try {
+                switch (choice) {
+                    case 1:
+                        viewMenu();
+                        break;
 
-                case 2:
-                    addMenuItem();
-                    break;
+                    case 2:
+                        addMenuItem();
+                        break;
 
-                case 3:
-                    searchItem();
-                    break;
+                    case 3:
+                        searchItem();
+                        break;
 
-                case 4:
-                    changePrice();
-                    break;
+                    case 4:
+                        changePrice();
+                        break;
 
-                case 5:
-                    changeAvailability();
-                    break;
+                    case 5:
+                        changeAvailability();
+                        break;
 
-                case 6:
-                    setInitialStock();
-                    break;
+                    case 6:
+                        setInitialStock();
+                        break;
 
-                case 7:
-                    updateStock();
-                    break;
+                    case 7:
+                        updateStock();
+                        break;
 
-                case 8:
-                    viewStock();
-                    break;
+                    case 8:
+                        viewStock();
+                        break;
 
-                case 9:
-                    System.out.println("Returning to main menu...");
-                    break;
+                    case 9:
+                        System.out.println("Returning to main menu...");
+                        break;
 
-                default:
-                    System.out.println("Invalid choice!");
+                    default:
+                        System.out.println("Invalid choice!");
+                }
+            } catch (IllegalStateException e) {
+                throw e;
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
             }
 
         } while (choice != 9);
@@ -102,48 +104,46 @@ public class AdminUI {
     }
 
     private void addMenuItem() {
-        sc.nextLine();
+        String name = InputHelper.readNonEmptyString("Enter item name: ");
 
-        System.out.print("Enter item name: ");
-        String name = sc.nextLine().trim();
-
-        if (name.isEmpty()) {
-            System.out.println("Item name cannot be empty.");
-            return;
-        }
-
-        System.out.print("Enter price: ");
-        double price = sc.nextDouble();
+        double price = InputHelper.readDouble("Enter price: ");
 
         if (price <= 0) {
             System.out.println("Price must be greater than zero.");
             return;
         }
 
-        System.out.print("Enter initial stock: ");
-        int stock = sc.nextInt();
+        int stock = InputHelper.readInt("Enter initial stock: ");
 
         if (stock < 0) {
             System.out.println("Stock cannot be negative.");
             return;
         }
 
-        MenuItem item = new MenuItem(
-                nextItemId, name, price, true
-        );
+        try {
+            MenuItem item = new MenuItem(
+                    nextItemId, name, price, true
+            );
 
-        menuService.addItem(item);
-        inventoryService.setInitialStock(nextItemId, stock);
+            menuService.addItem(item);
+            inventoryService.setInitialStock(nextItemId, stock);
 
-        System.out.println("Menu item added successfully!");
-        System.out.println("Item ID: " + nextItemId);
+            System.out.println("Menu item added successfully!");
+            System.out.println("Item ID: " + nextItemId);
 
-        nextItemId++;
+            nextItemId++;
+        } catch (IllegalArgumentException e) {
+            System.out.println("Could not add menu item: " + e.getMessage());
+        }
     }
 
     private void searchItem() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
+
+        if (id <= 0) {
+            System.out.println("Invalid item ID.");
+            return;
+        }
 
         MenuItem item = menuService.findItem(id);
 
@@ -155,11 +155,14 @@ public class AdminUI {
     }
 
     private void changePrice() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
 
-        System.out.print("Enter new price: ");
-        double price = sc.nextDouble();
+        if (id <= 0) {
+            System.out.println("Invalid item ID.");
+            return;
+        }
+
+        double price = InputHelper.readDouble("Enter new price: ");
 
         if (menuService.changePrice(id, price)) {
             System.out.println("Price updated successfully!");
@@ -169,14 +172,17 @@ public class AdminUI {
     }
 
     private void changeAvailability() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
+
+        if (id <= 0) {
+            System.out.println("Invalid item ID.");
+            return;
+        }
 
         System.out.println("1. Available");
         System.out.println("2. Unavailable");
-        System.out.print("Enter choice: ");
 
-        int choice = sc.nextInt();
+        int choice = InputHelper.readInt("Enter choice: ");
 
         if (choice != 1 && choice != 2) {
             System.out.println("Invalid choice.");
@@ -193,16 +199,14 @@ public class AdminUI {
     }
 
     private void setInitialStock() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
 
-        if (menuService.findItem(id) == null) {
+        if (id <= 0 || menuService.findItem(id) == null) {
             System.out.println("Item not found.");
             return;
         }
 
-        System.out.print("Enter stock quantity: ");
-        int quantity = sc.nextInt();
+        int quantity = InputHelper.readInt("Enter stock quantity: ");
 
         if (quantity < 0) {
             System.out.println("Stock cannot be negative.");
@@ -214,11 +218,14 @@ public class AdminUI {
     }
 
     private void updateStock() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
 
-        System.out.print("Enter new stock quantity: ");
-        int quantity = sc.nextInt();
+        if (id <= 0) {
+            System.out.println("Invalid item ID.");
+            return;
+        }
+
+        int quantity = InputHelper.readInt("Enter new stock quantity: ");
 
         if (inventoryService.updateStock(id, quantity)) {
             System.out.println("Stock updated successfully!");
@@ -228,10 +235,9 @@ public class AdminUI {
     }
 
     private void viewStock() {
-        System.out.print("Enter item ID: ");
-        long id = sc.nextLong();
+        long id = InputHelper.readLong("Enter item ID: ");
 
-        if (menuService.findItem(id) == null) {
+        if (id <= 0 || menuService.findItem(id) == null) {
             System.out.println("Item not found.");
             return;
         }

@@ -8,8 +8,17 @@ public class MenuItem {
     private boolean available;
 
     public MenuItem(long id , String name, double price, boolean available) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("Menu item ID must be greater than zero.");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Menu item name cannot be empty.");
+        }
+        if (!Double.isFinite(price) || price <= 0) {
+            throw new IllegalArgumentException("Menu item price must be greater than zero.");
+        }
         this.id=id;
-        this.name=name;
+        this.name=name.trim();
         this.price=price;
         this.available=available;
 
@@ -29,9 +38,15 @@ public class MenuItem {
     }
 
     public void setName(String name){
-        this.name=name;
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Menu item name cannot be empty.");
+        }
+        this.name=name.trim();
     }
     public void setPrice(double price){
+        if (!Double.isFinite(price) || price <= 0) {
+            throw new IllegalArgumentException("Menu item price must be greater than zero.");
+        }
         this.price=price;
     }
     public void setAvailable(boolean available){

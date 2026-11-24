@@ -19,7 +19,7 @@ public class InventoryService {
     // Set initial stock
     public void setInitialStock(long itemId, int quantity) {
 
-        if (quantity >= 0) {
+        if (itemId > 0 && quantity >= 0) {
             stock.put(itemId, quantity);
         }
     }
@@ -82,7 +82,12 @@ public class InventoryService {
     public void restoreStock(long itemId, int quantity) {
 
         if (quantity > 0 && stock.containsKey(itemId)) {
-            stock.put(itemId, getStock(itemId) + quantity);
+            int currentStock = getStock(itemId);
+            if (quantity > Integer.MAX_VALUE - currentStock) {
+                stock.put(itemId, Integer.MAX_VALUE);
+            } else {
+                stock.put(itemId, currentStock + quantity);
+            }
         }
     }
 

@@ -19,8 +19,12 @@ public class QueueService {
 
         List<Order> activeOrders = new ArrayList<>();
 
+        if (orders == null) {
+            return activeOrders;
+        }
+
         for (Order order : orders) {
-            if (queuePolicy.isActive(order.getStatus())) {
+            if (order != null && queuePolicy.isActive(order.getStatus())) {
                 activeOrders.add(order);
             }
         }
@@ -31,9 +35,16 @@ public class QueueService {
     // calculate orders ahead of a particular order
     public int getOrdersAhead(List<Order> orders, long orderId) {
 
+        if (orders == null) {
+            return -1;
+        }
+
         int count = 0;
 
         for (Order order : orders) {
+            if (order == null) {
+                continue;
+            }
 
             if (order.getOrderId() == orderId) {
                 if (!queuePolicy.isActive(order.getStatus())) {
@@ -49,6 +60,37 @@ public class QueueService {
         }
 
         return -1;
+    }
+
+    // calculate orders ahead of a particular order using token number
+    public int getOrdersAheadByToken(List<Order> orders, int tokenNumber) {
+
+        if (orders == null || tokenNumber <= 0) {
+            return -1;
+        }
+
+        int targetIndex = -1;
+        for (int i = orders.size() - 1; i >= 0; i--) {
+            Order order = orders.get(i);
+            if (order != null && order.getTokenNumber() == tokenNumber) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex == -1 || !queuePolicy.isActive(orders.get(targetIndex).getStatus())) {
+            return -1;
+        }
+
+        int count = 0;
+        for (int i = 0; i < targetIndex; i++) {
+            Order order = orders.get(i);
+            if (order != null && queuePolicy.isActive(order.getStatus())) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     // get total active orders

@@ -10,15 +10,22 @@ public class OrderStatus {
     public static final String COLLECTED="COLLECTED";
     public static final String CANCELLED="CANCELLED";
 
-    // return next status
-    public static String next(String status){
-        if(status.equals("PLACED")){
+    // Check whether a status string is a valid order status
+    public static boolean isValid(String status) {
+        return PLACED.equals(status)
+                || PREPARING.equals(status)
+                || READY.equals(status)
+                || COLLECTED.equals(status)
+                || CANCELLED.equals(status);
+    }
+
+    // return next status (null-safe)
+    public static String next(String status) {
+        if (PLACED.equals(status)) {
             return PREPARING;
-        }
-        else if( status.equals("PREPARING")){
+        } else if (PREPARING.equals(status)) {
             return READY;
-        }
-        else if(status.equals("READY")){
+        } else if (READY.equals(status)) {
             return COLLECTED;
         }
         return null;

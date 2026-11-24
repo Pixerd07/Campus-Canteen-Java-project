@@ -6,11 +6,9 @@ import com.campus.canteen.service.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class StudentUI {
 
-    private Scanner sc;
     private MenuService menuService;
     private OrderService orderService;
     private QueueService queueService;
@@ -21,7 +19,6 @@ public class StudentUI {
                      QueueService queueService,
                      InventoryService inventoryService) {
 
-        sc = new Scanner(System.in);
         this.menuService = menuService;
         this.orderService = orderService;
         this.queueService = queueService;
@@ -30,10 +27,13 @@ public class StudentUI {
 
     public void showMenu() {
 
-        System.out.print("Enter Student ID: ");
-        long studentId = sc.nextLong();
+        long studentId = InputHelper.readLong("Enter Student ID: ");
+        while (studentId <= 0) {
+            System.out.println("Student ID must be a positive number.");
+            studentId = InputHelper.readLong("Enter Student ID: ");
+        }
 
-        int choice;
+        int choice = -1;
 
         do {
             System.out.println("\n--- STUDENT MENU ---");
@@ -45,40 +45,45 @@ public class StudentUI {
             System.out.println("6. View Order Status");
             System.out.println("0. Back");
 
-            System.out.print("Enter choice: ");
-            choice = sc.nextInt();
+            choice = InputHelper.readInt("Enter choice: ");
 
-            switch (choice) {
-                case 1:
-                    browseMenu();
-                    break;
+            try {
+                switch (choice) {
+                    case 1:
+                        browseMenu();
+                        break;
 
-                case 2:
-                    placeOrder(studentId);
-                    break;
+                    case 2:
+                        placeOrder(studentId);
+                        break;
 
-                case 3:
-                    viewHistory(studentId);
-                    break;
+                    case 3:
+                        viewHistory(studentId);
+                        break;
 
-                case 4:
-                    cancelOrder(studentId);
-                    break;
+                    case 4:
+                        cancelOrder(studentId);
+                        break;
 
-                case 5:
-                    trackQueue(studentId);
-                    break;
+                    case 5:
+                        trackQueue(studentId);
+                        break;
 
-                case 6:
-                    viewStatus(studentId);
-                    break;
+                    case 6:
+                        viewStatus(studentId);
+                        break;
 
-                case 0:
-                    System.out.println("Returning to main menu.");
-                    break;
+                    case 0:
+                        System.out.println("Returning to main menu.");
+                        break;
 
-                default:
-                    System.out.println("Invalid choice.");
+                    default:
+                        System.out.println("Invalid choice.");
+                }
+            } catch (IllegalStateException e) {
+                throw e;
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
             }
 
         } while (choice != 0);
@@ -122,11 +127,15 @@ public class StudentUI {
 
         while (true) {
 
-            System.out.print("Enter Item ID (0 to finish): ");
-            long itemId = sc.nextLong();
+            long itemId = InputHelper.readLong("Enter Item ID (0 to finish): ");
 
             if (itemId == 0) {
                 break;
+            }
+
+            if (itemId < 0) {
+                System.out.println("Item ID cannot be negative.");
+                continue;
             }
 
             MenuItem item = menuService.findItem(itemId);
@@ -136,8 +145,12 @@ public class StudentUI {
                 continue;
             }
 
-            System.out.print("Enter quantity: ");
-            int qty = sc.nextInt();
+            int qty = InputHelper.readInt("Enter quantity: ");
+
+            if (qty <= 0) {
+                System.out.println("Quantity must be greater than zero.");
+                continue;
+            }
 
             try {
 
@@ -152,6 +165,12 @@ public class StudentUI {
                         existingItem = selectedItem;
                         break;
                     }
+                }
+
+                // Prevent integer overflow when combining quantities
+                if (qty > Integer.MAX_VALUE - existingQuantity) {
+                    System.out.println("Requested quantity is too large.");
+                    continue;
                 }
 
                 int totalQuantity = existingQuantity + qty;
@@ -171,11 +190,7 @@ public class StudentUI {
 
                 System.out.println("Item added to order.");
 
-            } catch (StockUnavailableException e) {
-
-                System.out.println(e.getMessage());
-
-            } catch (IllegalArgumentException e) {
+            } catch (StockUnavailableException | IllegalArgumentException e) {
 
                 System.out.println(e.getMessage());
             }
@@ -197,7 +212,7 @@ public class StudentUI {
                 );
             }
 
-        } catch (StockUnavailableException e) {
+        } catch (StockUnavailableException | IllegalArgumentException e) {
 
             System.out.println(e.getMessage());
             System.out.println("Order cannot be placed.");
@@ -208,9 +223,10 @@ public class StudentUI {
 
         for (OrderItem item : items) {
             MenuItem menuItem = menuService.findItem(item.getItemId());
+            String itemName = (menuItem != null) ? menuItem.getName() : ("Item #" + item.getItemId());
 
             System.out.println(
-                    menuItem.getName()
+                    itemName
                             + " x " + item.getQty()
                             + " = Rs. "
                             + (item.getPrice() * item.getQty())
@@ -225,8 +241,7 @@ public class StudentUI {
 
         System.out.println("Total Amount: Rs. " + total);
 
-        System.out.print("Confirm order? (1 Yes / 0 No): ");
-        int confirm = sc.nextInt();
+        int confirm = InputHelper.readInt("Confirm order? (1 Yes / 0 No): ");
 
         if (confirm != 1) {
             System.out.println("Order cancelled.");
@@ -236,51 +251,52 @@ public class StudentUI {
         // Deduct stock and keep track of successful deductions
         List<OrderItem> deductedItems = new ArrayList<>();
 
-        for (OrderItem item : items) {
+        try {
+            for (OrderItem item : items) {
 
-            boolean deducted = inventoryService.deductStock(
-                    item.getItemId(),
-                    item.getQty()
-            );
-
-            if (!deducted) {
-
-                // Restore any stock already deducted
-                for (OrderItem deductedItem : deductedItems) {
-                    inventoryService.restoreStock(
-                            deductedItem.getItemId(),
-                            deductedItem.getQty()
-                    );
-                }
-
-                System.out.println(
-                        "Stock changed. Order could not be placed."
-                );
-                return;
-            }
-
-            deductedItems.add(item);
-        }
-
-        Order order = orderService.placeOrder(studentId, items);
-
-        if (order != null) {
-
-            System.out.println("Order placed successfully!");
-            System.out.println("Order ID: " + order.getOrderId());
-            System.out.println("Total: Rs. " + order.getTotalPrice());
-
-        } else {
-
-            // Restore stock if order creation fails
-            for (OrderItem item : deductedItems) {
-                inventoryService.restoreStock(
+                boolean deducted = inventoryService.deductStock(
                         item.getItemId(),
                         item.getQty()
                 );
+
+                if (!deducted) {
+                    restoreDeductedStock(deductedItems);
+                    System.out.println(
+                            "Stock changed. Order could not be placed."
+                    );
+                    return;
+                }
+
+                deductedItems.add(item);
             }
 
-            System.out.println("Unable to place order.");
+            Order order = orderService.placeOrder(studentId, items);
+
+            if (order != null) {
+
+                System.out.println("Order placed successfully!");
+                System.out.println("Token Number: #" + order.getTokenNumber());
+                System.out.println("Order ID: " + order.getOrderId());
+                System.out.println("Total: Rs. " + order.getTotalPrice());
+
+            } else {
+
+                restoreDeductedStock(deductedItems);
+                System.out.println("Unable to place order.");
+            }
+        } catch (Exception e) {
+            // Roll back deducted stock if an unexpected exception occurs
+            restoreDeductedStock(deductedItems);
+            System.out.println("Failed to place order: " + e.getMessage());
+        }
+    }
+
+    private void restoreDeductedStock(List<OrderItem> deductedItems) {
+        for (OrderItem item : deductedItems) {
+            inventoryService.restoreStock(
+                    item.getItemId(),
+                    item.getQty()
+            );
         }
     }
 
@@ -291,7 +307,8 @@ public class StudentUI {
         for (Order order : orders) {
 
             System.out.println(
-                    "Order ID: " + order.getOrderId() +
+                    "Token: #" + order.getTokenNumber() +
+                            " | Order ID: " + order.getOrderId() +
                             " | Status: " + order.getStatus() +
                             " | Total: Rs." + order.getTotalPrice()
             );
@@ -304,8 +321,12 @@ public class StudentUI {
 
     private void cancelOrder(long studentId) {
 
-        System.out.print("Enter Order ID: ");
-        long orderId = sc.nextLong();
+        long orderId = InputHelper.readLong("Enter Order ID: ");
+
+        if (orderId <= 0) {
+            System.out.println("Invalid Order ID.");
+            return;
+        }
 
         Order order = orderService.findOrder(orderId);
 
@@ -333,19 +354,26 @@ public class StudentUI {
 
     private void trackQueue(long studentId) {
 
-        System.out.print("Enter Order ID: ");
-        long orderId = sc.nextLong();
+        int tokenNumber = InputHelper.readInt("Enter Token Number: ");
 
-        Order order = orderService.findOrder(orderId);
-
-        if (order == null || order.getStudentId() != studentId) {
-            System.out.println("Order not found.");
+        if (tokenNumber <= 0) {
+            System.out.println("Invalid Token Number.");
             return;
         }
 
-        int ahead = queueService.getOrdersAhead(
-                orderService.getAllOrders(), orderId
+        Order order = orderService.findOrderByToken(tokenNumber);
+
+        if (order == null || order.getStudentId() != studentId) {
+            System.out.println("Order not found for this token.");
+            return;
+        }
+
+        int ahead = queueService.getOrdersAheadByToken(
+                orderService.getAllOrders(), tokenNumber
         );
+
+        System.out.println("Token Number: #" + order.getTokenNumber());
+        System.out.println("Status: " + order.getStatus());
 
         if (ahead >= 0) {
             System.out.println("Orders ahead: " + ahead);
@@ -356,8 +384,12 @@ public class StudentUI {
 
     private void viewStatus(long studentId) {
 
-        System.out.print("Enter Order ID: ");
-        long orderId = sc.nextLong();
+        long orderId = InputHelper.readLong("Enter Order ID: ");
+
+        if (orderId <= 0) {
+            System.out.println("Invalid Order ID.");
+            return;
+        }
 
         Order order = orderService.findOrder(orderId);
 

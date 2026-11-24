@@ -59,7 +59,7 @@ public class MenuService {
 
         MenuItem item = findItem(id);
 
-        if (item == null || newPrice <= 0) {
+        if (item == null || !Double.isFinite(newPrice) || newPrice <= 0) {
             return false;
         }
 

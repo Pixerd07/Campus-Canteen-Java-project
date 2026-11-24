@@ -2,7 +2,7 @@ package com.campus.canteen.service;
 
 import com.campus.canteen.model.Order;
 import com.campus.canteen.model.OrderItem;
-import com.campus.canteen.model.MenuItem;
+import com.campus.canteen.model.OrderStatus;
 import com.campus.canteen.policy.OrderPolicy;
 
 import java.util.ArrayList;
@@ -23,17 +23,19 @@ public class OrderService {
     // place a new order
     public Order placeOrder(long studentId, List<OrderItem> items) {
 
-        if (items == null || items.isEmpty()) {
+        if (studentId <= 0 || items == null || items.isEmpty()) {
             return null;
+        }
+
+        for (OrderItem item : items) {
+            if (item == null || item.getQty() <= 0) {
+                return null;
+            }
         }
 
         Order order = new Order(nextOrderId, studentId);
 
         for (OrderItem item : items) {
-            if (item.getQty() <= 0) {
-                return null;
-            }
-
             order.addItem(item);
         }
 
@@ -62,7 +64,7 @@ public class OrderService {
         }
 
         for (OrderItem item : newItems) {
-            if (item.getQty() <= 0) {
+            if (item == null || item.getQty() <= 0) {
                 return false;
             }
         }
@@ -89,7 +91,7 @@ public class OrderService {
             return false;
         }
 
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
 
         return true;
     }
@@ -99,6 +101,23 @@ public class OrderService {
 
         for (Order order : orders) {
             if (order.getOrderId() == orderId) {
+                return order;
+            }
+        }
+
+        return null;
+    }
+
+    // find the latest order using token number
+    public Order findOrderByToken(int tokenNumber) {
+
+        if (tokenNumber <= 0) {
+            return null;
+        }
+
+        for (int i = orders.size() - 1; i >= 0; i--) {
+            Order order = orders.get(i);
+            if (order.getTokenNumber() == tokenNumber) {
                 return order;
             }
         }

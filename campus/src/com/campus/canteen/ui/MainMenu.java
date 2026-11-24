@@ -7,19 +7,13 @@ import com.campus.canteen.service.OrderService;
 import com.campus.canteen.service.QueueService;
 import com.campus.canteen.service.InventoryService;
 
-import java.util.Scanner;
-
 public class MainMenu {
-
-    private Scanner sc;
 
     private StudentUI studentUI;
     private KitchenUI kitchenUI;
     private AdminUI adminUI;
 
     public MainMenu() {
-        sc = new Scanner(System.in);
-
         MenuService menuService = new MenuService();
         OrderService orderService = new OrderService();
         QueueService queueService = new QueueService();
@@ -65,7 +59,7 @@ public class MainMenu {
     }
 
     public void showMenu() {
-        int choice;
+        int choice = -1;
 
         do {
             System.out.println("\n================================");
@@ -76,35 +70,49 @@ public class MainMenu {
             System.out.println("3. Admin Panel");
             System.out.println("4. Exit");
 
-            System.out.print("Enter your choice: ");
-            choice = sc.nextInt();
+            choice = InputHelper.readInt("Enter your choice: ");
 
-            switch (choice) {
-                case 1:
-                    studentUI.showMenu();
-                    break;
+            try {
+                switch (choice) {
+                    case 1:
+                        studentUI.showMenu();
+                        break;
 
-                case 2:
-                    kitchenUI.showMenu();
-                    break;
+                    case 2:
+                        kitchenUI.showMenu();
+                        break;
 
-                case 3:
-                    adminUI.showMenu();
-                    break;
+                    case 3:
+                        adminUI.showMenu();
+                        break;
 
-                case 4:
-                    System.out.println("Thank you for using Campus Canteen System!");
-                    break;
+                    case 4:
+                        System.out.println("Thank you for using Campus Canteen System!");
+                        break;
 
-                default:
-                    System.out.println("Invalid choice. Try again.");
+                    default:
+                        System.out.println("Invalid choice. Try again.");
+                }
+            } catch (IllegalStateException e) {
+                // Propagate closed input stream upward to exit cleanly
+                throw e;
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
             }
 
         } while (choice != 4);
     }
 
     public static void main(String[] args) {
-        MainMenu mainMenu = new MainMenu();
-        mainMenu.showMenu();
+        try {
+            MainMenu mainMenu = new MainMenu();
+            mainMenu.showMenu();
+        } catch (IllegalStateException e) {
+            System.out.println("\n" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("\nAn unexpected error occurred: " + e.getMessage());
+        } finally {
+            InputHelper.close();
+        }
     }
 }
