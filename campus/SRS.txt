@@ -1,0 +1,350 @@
+================================================================================
+                SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+                   CAMPUS CANTEEN MANAGEMENT SYSTEM
+================================================================================
+
+Version : 1.0
+Date    : November 2026
+Prepared: 2nd Year Computer Science Project Documentation
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Introduction
+   1.1 Purpose
+   1.2 Scope
+   1.3 Definitions, Acronyms, and Abbreviations
+   1.4 Overview
+2. Overall Description
+   2.1 Product Perspective
+   2.2 Product Functions
+   2.3 User Classes and Characteristics
+   2.4 Operating Environment
+   2.5 Design and Implementation Constraints
+   2.6 Assumptions and Dependencies
+3. System Features and Functional Requirements
+   3.1 Main Menu and Startup (Demo Data)
+   3.2 Student Panel Requirements
+   3.3 Kitchen Panel Requirements
+   3.4 Admin Panel Requirements
+   3.5 Domain & Policy Validation Rules
+4. External Interface Requirements
+   4.1 User Interfaces
+   4.2 Hardware Interfaces
+   4.3 Software Interfaces
+5. Non-Functional Requirements
+   5.1 Performance Requirements
+   5.2 Reliability and Error Handling
+   5.3 Maintainability and Modularity
+   5.4 Usability
+6. Data & Domain Model Summary
+7. Future Enhancements / Out-of-Scope Items
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+1.1 Purpose
+-----------
+This Software Requirements Specification (SRS) defines the functional and
+non-functional requirements for the Campus Canteen Management System. It is
+intended for students, instructors, and developers reviewing or extending this
+console-based Java application.
+
+1.2 Scope
+---------
+The Campus Canteen Management System automates basic daily canteen operations
+for a college campus in an in-memory console application. The system supports:
+- Browsing menu items and checking real-time stock availability
+- Placing, tracking, and cancelling student food orders
+- Managing an active kitchen order queue with token numbers
+- Administering menu items, prices, availability, and inventory stock
+
+The current version operates entirely in memory during a single execution
+session and preloads demo menu items and stock on startup.
+
+1.3 Definitions, Acronyms, and Abbreviations
+--------------------------------------------
+- SRS         : Software Requirements Specification
+- UI          : User Interface (Console/CLI in this project)
+- CLI         : Command Line Interface
+- OOP         : Object-Oriented Programming
+- Token No.   : Sequential number assigned to each placed order for queue
+                tracking
+- Active Order: An order whose status is PLACED, PREPARING, or READY
+
+1.4 Overview
+------------
+Section 2 describes the system context, user roles, and constraints.
+Section 3 specifies detailed functional requirements by panel and policy.
+Section 4 covers user and software interfaces.
+Section 5 defines non-functional requirements.
+Section 6 summarizes core data models and their constraints.
+Section 7 lists unintegrated models and future improvements.
+
+================================================================================
+2. OVERALL DESCRIPTION
+================================================================================
+
+2.1 Product Perspective
+-----------------------
+The application is a standalone Java console program following a layered
+package architecture:
+- com.campus.canteen         : Application entry point (App.java)
+- com.campus.canteen.ui      : Console menus and input handling
+- com.campus.canteen.service : Business operations and in-memory storage
+- com.campus.canteen.policy  : Reusable business rules
+- com.campus.canteen.model   : Core domain entities and status constants
+
+2.2 Product Functions
+---------------------
+At a high level, the system provides:
+1. Demo menu and inventory initialization at startup
+2. Role-based menu navigation (Student, Kitchen, Admin)
+3. Menu browsing and item search
+4. Multi-item order creation with live stock validation and rollback protection
+5. Order cancellation with automatic stock restoration
+6. Token-based queue position tracking
+7. Kitchen order status progression
+8. Admin menu and stock management
+
+2.3 User Classes and Characteristics
+------------------------------------
+1. Student
+   - Identified by a positive numeric Student ID.
+   - Places orders, views order history, checks status, tracks queue position,
+     and cancels eligible orders.
+
+2. Kitchen Staff
+   - Views all orders or currently active orders.
+   - Advances order status step-by-step as food is prepared and collected.
+
+3. Canteen Admin
+   - Manages the menu catalog (add items, change prices, toggle availability).
+   - Manages inventory stock levels (set initial stock, update stock, view
+     stock).
+
+2.4 Operating Environment
+-------------------------
+- Programming Language : Java (JDK 21 tested; standard Java SE libraries only)
+- Interface            : Standard terminal / command-line console (stdin/stdout)
+- External Libraries   : None (uses only java.util.* collections and Scanner)
+
+2.5 Design and Implementation Constraints
+-----------------------------------------
+- All data (menu items, stock counts, orders) is stored in memory using
+  ArrayList and HashMap; no database or file persistence is used.
+- The system is single-threaded and accepts sequential console input from one
+  terminal session at a time.
+- Menu item IDs for newly added admin items start from 6 (IDs 1-5 are used by
+  demo data).
+
+2.6 Assumptions and Dependencies
+--------------------------------
+- Users enter numeric IDs, choices, prices, and quantities via keyboard input.
+- No login credentials or password authentication are required to switch
+  between Student, Kitchen, and Admin panels.
+- Because data is volatile, all orders and modifications are lost when the
+  application exits.
+
+================================================================================
+3. SYSTEM FEATURES AND FUNCTIONAL REQUIREMENTS
+================================================================================
+
+3.1 Main Menu and Startup (Demo Data)
+-------------------------------------
+FR-01: On startup, the system shall initialize MenuService, OrderService,
+       QueueService, and InventoryService and preload 5 demo menu items:
+       - ID 1: Veg Burger      | Rs. 60.0  | Initial Stock: 20
+       - ID 2: Cheese Sandwich | Rs. 80.0  | Initial Stock: 15
+       - ID 3: Masala Maggi    | Rs. 50.0  | Initial Stock: 25
+       - ID 4: Cold Coffee     | Rs. 70.0  | Initial Stock: 30
+       - ID 5: Veg Pizza       | Rs. 120.0 | Initial Stock: 10
+FR-02: The Main Menu shall allow the user to select:
+       1. Student Panel
+       2. Kitchen Panel
+       3. Admin Panel
+       4. Exit
+
+3.2 Student Panel Requirements
+------------------------------
+FR-03: Before showing Student Menu options, the system shall prompt for a
+       Student ID and reject non-positive values (<= 0).
+FR-04: Browse Menu
+       - The system shall display all menu items with ID, name, and price.
+       - If an item is marked unavailable or its stock is 0, the system shall
+         label it "OUT OF STOCK".
+FR-05: Place Order
+       - The student shall enter item IDs and positive quantities repeatedly
+         until entering 0 to finish selection.
+       - If the same item ID is entered multiple times in one order, the
+         system shall combine quantities (checking against integer overflow)
+         and validate total requested quantity against available stock.
+       - If requested quantity is invalid or exceeds stock (or stock is 0),
+         the system shall display an error message without crashing.
+       - Before confirmation, the system shall re-validate stock for all
+         selected items and display an itemized Order Summary and total amount.
+       - Upon confirmation (1 = Yes), the system shall deduct stock for each
+         item and create the order with a unique Order ID (starting at 1) and
+         Token Number (starting at 1).
+       - If stock deduction fails partway through or an unexpected error
+         occurs, the system shall restore all already-deducted stock.
+FR-06: View Order History
+       - The system shall list all orders belonging to the current Student ID,
+         showing Token Number, Order ID, Status, and Total Price.
+FR-07: Cancel Order
+       - The student shall enter an Order ID.
+       - The system shall allow cancellation only if the order exists, belongs
+         to the current Student ID, and has status PLACED.
+       - Upon cancellation, the order status shall become CANCELLED and all
+         item quantities shall be restored to inventory stock.
+FR-08: Track Queue
+       - The student shall enter a Token Number.
+       - If the latest order with that token exists and belongs to the student,
+         the system shall display the order status and the number of active
+         orders ahead of it in the queue (or state that it is not active).
+FR-09: View Order Status
+       - The student shall enter an Order ID and view its status if the order
+         belongs to the current Student ID.
+
+3.3 Kitchen Panel Requirements
+------------------------------
+FR-10: View All Orders
+       - The system shall display all recorded orders with Token Number,
+         Order ID, Student ID, Status, ordered items, and Total Price.
+FR-11: View Active Orders
+       - The system shall filter and display only orders with status PLACED,
+         PREPARING, or READY.
+FR-12: Update Order Status
+       - Staff shall enter an Order ID.
+       - If valid and not in a terminal state (COLLECTED or CANCELLED), the
+         system shall show Current Status and Next Status and ask for
+         confirmation (1 = Yes, 0 = No) before updating.
+       - Allowed transitions:
+         PLACED -> PREPARING -> READY -> COLLECTED.
+
+3.4 Admin Panel Requirements
+----------------------------
+FR-13: View Menu
+       - The system shall list all menu items with ID, Name, Price,
+         Availability flag, and current Stock.
+FR-14: Add Menu Item
+       - Admin shall enter item name (non-empty), price (> 0), and initial
+         stock (>= 0).
+       - The system shall assign the next sequential item ID (starting at 6),
+         mark it available, add it to the menu, and record its initial stock.
+FR-15: Search Menu Item
+       - Admin shall search for a menu item by positive Item ID and view its
+         details if found.
+FR-16: Change Item Price
+       - Admin shall update the price of an existing item ID to a finite
+         positive value (> 0).
+FR-17: Change Item Availability
+       - Admin shall set an existing item ID as Available (1) or Unavailable (2).
+FR-18: Set Initial Stock
+       - Admin shall set a non-negative stock quantity (>= 0) for an existing
+         menu item.
+FR-19: Update Stock
+       - Admin shall update stock (>= 0) for an item already present in
+         inventory.
+FR-20: View Stock
+       - Admin shall check available stock for an existing menu item ID.
+
+3.5 Domain & Policy Validation Rules
+------------------------------------
+FR-21: Order modification/cancellation is permitted only when status is PLACED
+       (OrderPolicy).
+FR-22: An order is considered active in the queue only when status is PLACED,
+       PREPARING, or READY (QueuePolicy).
+FR-23: Stock quantity requests must be >= 1 and <= available stock
+       (InventoryPolicy); otherwise InventoryService.validateStock throws
+       IllegalArgumentException or StockUnavailableException.
+
+================================================================================
+4. EXTERNAL INTERFACE REQUIREMENTS
+================================================================================
+
+4.1 User Interfaces
+-------------------
+- Text-based menu interface rendered to System.out.
+- Input read line-by-line via InputHelper using java.util.Scanner(System.in).
+- Numeric prompts (int, long, double) and non-empty string prompts re-prompt
+  on invalid input until valid data is entered.
+
+4.2 Hardware Interfaces
+-----------------------
+- Standard keyboard and display terminal capable of running a JVM.
+
+4.3 Software Interfaces
+-----------------------
+- Java Standard Edition Runtime (JRE / JDK).
+- No external databases, REST APIs, or third-party JAR dependencies.
+
+================================================================================
+5. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+5.1 Performance Requirements
+----------------------------
+- All operations operate on in-memory ArrayList and HashMap structures and
+  execute instantaneously for typical campus-scale menu and daily order sizes.
+- Stock lookups by item ID run in O(1) average time via HashMap<Long, Integer>.
+
+5.2 Reliability and Error Handling
+----------------------------------
+- Invalid number formats (e.g., entering text for a number) are caught via
+  NumberFormatException in InputHelper without terminating the application.
+- Infinite or NaN floating-point values are rejected for prices/doubles.
+- Closed input stream / EOF (NoSuchElementException) raises
+  IllegalStateException, exits menus cleanly, and closes Scanner in finally.
+- Stock deduction failures or unexpected exceptions during order placement
+  trigger automatic rollback of deducted stock.
+
+5.3 Maintainability and Modularity
+----------------------------------
+- Business rules are isolated in policy classes (InventoryPolicy, OrderPolicy,
+  QueuePolicy) separate from service and UI layers.
+- Services are injected into UI classes via constructors in MainMenu.
+
+5.4 Usability
+-------------
+- Clear numbered menus and confirmation prompts prevent accidental status
+  updates or unconfirmed orders.
+- Informative messages are displayed for invalid IDs, empty lists, and
+  out-of-stock conditions.
+
+================================================================================
+6. DATA & DOMAIN MODEL SUMMARY
+================================================================================
+
+- MenuItem   : id (long > 0), name (non-empty), price (finite > 0),
+               available (boolean)
+- Order      : orderId (long > 0), studentId (long > 0), tokenNumber (int),
+               status (PLACED | PREPARING | READY | COLLECTED | CANCELLED),
+               items (List<OrderItem>)
+- OrderItem  : itemId (long > 0), qty (int > 0), price (finite >= 0)
+- Stock Map  : Map<Long, Integer> mapping itemId -> available quantity
+- Student    : id (long > 0), name (non-empty)
+- Payment    : paymentId (long > 0), orderId (long > 0), amount (finite >= 0),
+               paymentMethod ("CASH"), paymentStatus (PENDING | PAID | REFUNDED)
+
+Note: Student and Payment/PaymentStatus model classes are implemented in the
+model package with validation rules, though they are not yet integrated into
+the interactive console UI flows.
+
+================================================================================
+7. FUTURE ENHANCEMENTS / OUT-OF-SCOPE ITEMS
+================================================================================
+
+- Persistent Storage: Save menu, inventory, and orders to files (e.g., data/)
+  or a relational database using JDBC.
+- Payment Integration: Connect the Payment and PaymentStatus models to the
+  StudentUI order placement and cancellation flows.
+- Student Accounts: Integrate the Student model for student registration/lookup
+  instead of accepting only a raw Student ID.
+- Order Modification UI: Expose OrderService.modifyOrder() in StudentUI.
+- Automated Testing: Add unit tests for services, policies, and models.
+
+================================================================================
+END OF SRS
+================================================================================
