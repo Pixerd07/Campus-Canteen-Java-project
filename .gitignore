@@ -1,0 +1,9 @@
+# Maven build output
+target/
+out/
+
+# Database credentials
+config.properties
+
+# IntelliJ settings
+.idea/
