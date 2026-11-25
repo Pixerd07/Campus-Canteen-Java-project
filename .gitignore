@@ -1,6 +1,0 @@
-target/
-out/
-out_old/
-.idea/
-*.class
-config.properties
