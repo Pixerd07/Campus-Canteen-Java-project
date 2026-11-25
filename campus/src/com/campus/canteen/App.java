@@ -7,6 +7,7 @@ public class App {
 
     public static void main(String[] args) {
         try {
+
             MainMenu mainMenu = new MainMenu();
             mainMenu.showMenu();
         } catch (IllegalStateException e) {
